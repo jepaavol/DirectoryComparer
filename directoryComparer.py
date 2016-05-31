@@ -1,4 +1,8 @@
-import os 
+import os
+import hashlib
+
+BLOCK_SIZE = 65536
+
 
 class DirectoryComparer(object):
     
@@ -7,7 +11,36 @@ class DirectoryComparer(object):
         self.target = options.target_dir
         self.output = options.outout
 
+    def process_directory(self, directory):
+        """
+        Function to walk through folder structure and calculate checksums.
+        """
+        
+        resultDict = {}
+        
+        for root, dirs, files in os.walk(directory):
+            for f in files:
+                #Calculating hash over the file
+                md5 = self.__get_md5(open(os.path.join(root, f), 'rb'))
+                if md5 not in resultDict:
+                    resultDict[md5]=[]
+                resultDict[md5].append(os.path.join(root, f))
+                
+        return resultDict
 
+    def __get_md5(self, fp):
+        """
+        Internal function to get MD5 of the file
+        """
+        
+        hasher = hashlib.md5()
+        
+        buf = fp.read(BLOCK_SIZE)
+        while len(buf) > 0: 
+            hasher.update(buf)
+            buf = fp.read(BLOCK_SIZE)
+        
+        return hasher.digest()
 
 def main():
     import argparse
@@ -23,6 +56,8 @@ def main():
     options = parser.parse_args()
     
     dc = DirectoryComparer(options)
+    dict1 = dc.process_directory(options.source_dir)
+    dict2 = dc.process_directory(options.target_dir)
     
     
 if __name__ == '__main__':
